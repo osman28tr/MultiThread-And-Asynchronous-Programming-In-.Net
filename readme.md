@@ -195,7 +195,7 @@ Thread'leri **sıraya koymak** için kullanılır. Örneğin önce `thread1` ça
 		thread.Start();
 		thread.Join();
 		thread2.Start();
-
+```
 > [!WARNING]
 > Senkronizasyon yalnızca **kritik bölgelere** (ortak kaynakların kullanıldığı kısımlara) uygulanır, kodun tamamına uygulanmaz.
 
