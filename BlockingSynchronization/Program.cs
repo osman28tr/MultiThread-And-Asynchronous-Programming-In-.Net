@@ -1,7 +1,9 @@
 ﻿class Program
-{	
+{
 	static Mutex _mutex;
 	static string programName = "Example Project";
+	static ReaderWriterLockSlim readerWriterLockSlim = new ReaderWriterLockSlim();
+	static int counter = 0;
 	static void Main(string[] args)
 	{
 		#region ThreadId
@@ -355,53 +357,97 @@
 		#endregion
 
 		#region SemaphoreSlim
-		List<int> numbers = new();
-		using SemaphoreSlim semaphoreSlim = new(2, 3); //ilk parametre erişim izni alabilecek thread sayısı, erişim izni alabilecek thread
-										 //sayısını tutan bir sayaçtır aslında, ikinci parametre ise erişim verilecek maksimum thread sayısı
-		Thread thread = new(() =>
-		{
-			semaphoreSlim.Wait(100);
-			int i = 0;
-			while (i < 10)
-			{
-				Console.WriteLine($"Thread 1 :{++i}");
-				numbers.Add(i);
-				Thread.Sleep(100);
-			}
-			semaphoreSlim.Release(); //release ettikten sonra semaphore sayacın değerini bir arttırır.
-		});
+		//List<int> numbers = new();
+		//using SemaphoreSlim semaphoreSlim = new(2, 3); //ilk parametre erişim izni alabilecek thread sayısı, erişim izni alabilecek thread
+		//								 //sayısını tutan bir sayaçtır aslında, ikinci parametre ise erişim verilecek maksimum thread sayısı
+		//Thread thread = new(() =>
+		//{
+		//	semaphoreSlim.Wait(100);
+		//	int i = 0;
+		//	while (i < 10)
+		//	{
+		//		Console.WriteLine($"Thread 1 :{++i}");
+		//		numbers.Add(i);
+		//		Thread.Sleep(100);
+		//	}
+		//	semaphoreSlim.Release(); //release ettikten sonra semaphore sayacın değerini bir arttırır.
+		//});
 
-		Thread thread2 = new(() =>
-		{
-			semaphoreSlim.Wait(100);
-			int i = 10;
-			while (i < 20)
-			{
-				Console.WriteLine($"Thread 2 :{++i}");
-				numbers.Add(i);
-				Thread.Sleep(100);
-			}
-			semaphoreSlim.Release();
-		});
+		//Thread thread2 = new(() =>
+		//{
+		//	semaphoreSlim.Wait(100);
+		//	int i = 10;
+		//	while (i < 20)
+		//	{
+		//		Console.WriteLine($"Thread 2 :{++i}");
+		//		numbers.Add(i);
+		//		Thread.Sleep(100);
+		//	}
+		//	semaphoreSlim.Release();
+		//});
 
-		Thread thread3 = new(() =>
-		{
-			semaphoreSlim.Wait(100);
-			int i = 30;
-			while (i < 40)
-			{
-				Console.WriteLine($"Thread 3 :{++i}");
-				numbers.Add(i);
-				Thread.Sleep(100);
-			}
-			semaphoreSlim.Release();
-		});
+		//Thread thread3 = new(() =>
+		//{
+		//	semaphoreSlim.Wait(100);
+		//	int i = 30;
+		//	while (i < 40)
+		//	{
+		//		Console.WriteLine($"Thread 3 :{++i}");
+		//		numbers.Add(i);
+		//		Thread.Sleep(100);
+		//	}
+		//	semaphoreSlim.Release();
+		//});
 
-		thread.Start();
-		thread2.Start();
-		thread3.Start();
+		//thread.Start();
+		//thread2.Start();
+		//thread3.Start();
 
-		
+
+		#endregion
+
+		#region ReaderWriterLock & ReaderWriterLockSlim Sync.
+
+		//for (int i = 0; i < 5; i++)
+		//	new Thread(Read).Start();
+
+		//for (int i = 0; i < 2; i++)
+		//	new Thread(Write).Start();
+
+		//static void Read()
+		//{
+		//	for (int i = 0; i < 10; i++)
+		//	{
+		//		try
+		//		{
+		//			counter++;
+		//			readerWriterLockSlim.EnterReadLock();
+		//			Console.WriteLine($"Reader : Thread {Thread.CurrentThread.ManagedThreadId} is reading : {counter}");
+		//		}
+		//		finally
+		//		{
+		//			readerWriterLockSlim.ExitReadLock();
+		//		}
+		//	}
+		//}
+
+		//static void Write()
+		//{
+		//	try
+		//	{
+		//		readerWriterLockSlim.EnterWriteLock();
+		//		for (int i = 0; i < 10; i++)
+		//		{
+		//			counter++;
+		//			Console.WriteLine($"Writer : Thread {Thread.CurrentThread.ManagedThreadId} is writing : {counter}");
+		//		}
+		//	}
+		//	finally
+		//	{
+		//		readerWriterLockSlim.ExitWriteLock();
+		//	}
+		//}
+
 		#endregion
 		Console.Read();
 	}
