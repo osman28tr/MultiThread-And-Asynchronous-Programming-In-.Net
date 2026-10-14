@@ -527,7 +527,7 @@ Bir thread'in bir olayı beklemesini ve olay gerçekleştikten sonra işlemine d
 - Beklemeye alınan thread'lerden **yalnızca biri** çalışmasına devam eder.
 - Diğer thread'ler, işletim sistemi tarafından belirlenen **kuyruk sırasına** göre bekler.
 
-> 🔫 **Silah benzetmesi:** `false` denildiğinde kurma kolu çekilmiştir ve event set edilmeyi bekler. `true` denildiğinde kurma kolunun tekrar çekilmesi, yani **reset** edilmesi gerekir. Reset edildikten sonra kurma kolu çekilir ve event set edilebilir.
+
 
 > [!NOTE]
 > `AutoResetEvent`'te bir thread `Set` fonksiyonuyla sinyali verdikten sonra, event arka planda **otomatik olarak resetlenir.** Böylece sinyali alan thread işlemine devam ederken ilgili event tekrar set edilip yeni sinyal gönderilebilir. Bu otomatik reset, **her sinyal gönderiminde** geçerlidir.
