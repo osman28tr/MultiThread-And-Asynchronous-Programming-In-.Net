@@ -36,6 +36,13 @@
 - [Spinning Senkronizasyon](#-spinning-senkronizasyon)
   - [SpinLock](#spinlock)
   - [SpinWait](#spinwait)
+- [ReaderWriterLock & ReaderWriterLockSlim](#-readerwriterlock--readerwriterlockslim)
+- [Threadler Arası İletişim ve Haberleşme](#-threadler-arası-iletişim-ve-haberleşme)
+  - [Signalling](#signalling)
+  - [ManualResetEventSlim](#manualreseteventslim)
+  - [AutoResetEvent](#autoresetevent)
+  - [EventWaitHandle](#eventwaithandle)
+  - [CountdownEvent](#countdownevent)
 - [Genel Karşılaştırma](#-genel-karşılaştırma)
 
 ---
@@ -420,6 +427,175 @@ SpinWait.SpinUntil(() => hazir); // şart sağlanana kadar bekler
 
 ---
 
+## 📖 ReaderWriterLock & ReaderWriterLockSlim
+
+Race condition durumlarında ortak kullanılan kaynağa aynı anda erişen thread'lerden **yalnızca birine yazma veya değiştirme izni** verilir, diğer thread'ler ise **sadece okuma** yapabilir.
+
+> [!IMPORTANT]
+> Yazma işlemi yapan thread'in işlemi süresince diğer thread'ler **ne okuma ne de yazma** yapabilir.
+
+- Okuma ve yazma işlemlerini **ayrı ayrı** ele alan yapılanmalardır.
+- **Okuma işlemlerinin yoğun, yazma işleminin nadir** olduğu durumlarda kullanılır.
+- `Slim` versiyonu daha **hafif, verimli ve dispose edilebilir** yapıdadır.
+
+```csharp
+private static readonly ReaderWriterLockSlim _rwLock = new();
+private static int veri = 0;
+
+static void Oku()
+{
+    _rwLock.EnterReadLock();
+    try
+    {
+        Console.WriteLine($"Okunan değer: {veri}");
+    }
+    finally
+    {
+        _rwLock.ExitReadLock();
+    }
+}
+
+static void Yaz()
+{
+    _rwLock.EnterWriteLock();
+    try
+    {
+        veri++;
+    }
+    finally
+    {
+        _rwLock.ExitWriteLock();
+    }
+}
+```
+
+---
+
+## 📡 Threadler Arası İletişim ve Haberleşme
+
+### Signalling
+
+Thread'ler arası **haberleşmeyi, iletişimi ve senkronizasyonu** sağlayan yapılanmalardır. Bir thread'de belirli bir işlemin gerçekleştiğini diğer thread'e bildirmek ve diğer thread'in bu şarta göre işlemine devam etmesini sağlamak amacıyla kullanılır.
+
+Race condition, critical section kontrolü ve thread'ler arası güvenli paylaşım sağlayabilir.
+
+**Signalling yaklaşımında kullanılan araçlar:** `ManualResetEventSlim`, `AutoResetEvent`, `EventWaitHandle`, `CountdownEvent`
+
+### ManualResetEventSlim
+
+Birden fazla thread'in belirli bir olayın gerçekleşmesini beklemesini ve olay gerçekleştikten sonra işlemlerine devam etmesini sağlar.
+
+- Sinyal gönderildiğinde sinyali alan **tüm thread'ler aktif hale gelir** ve asenkron şekilde çalışmaya devam eder.
+- Tekrar sinyal gönderilebilmesi için event'in **manuel olarak resetlenmesi** gerekir.
+
+```csharp
+ManualResetEventSlim manualEvent = new(false);
+
+Thread thread1 = new(() =>
+{
+    Console.WriteLine("Thread 1 sinyal bekliyor...");
+    manualEvent.Wait();
+    Console.WriteLine("Thread 1 devam etti.");
+});
+
+Thread thread2 = new(() =>
+{
+    Console.WriteLine("Thread 2 sinyal bekliyor...");
+    manualEvent.Wait();
+    Console.WriteLine("Thread 2 devam etti.");
+});
+
+thread1.Start();
+thread2.Start();
+
+Thread.Sleep(1000);
+manualEvent.Set();   // bekleyen tüm thread'ler serbest kalır
+// manualEvent.Reset(); // tekrar sinyal beklenir hale getirmek için manuel reset
+```
+
+### AutoResetEvent
+
+Bir thread'in bir olayı beklemesini ve olay gerçekleştikten sonra işlemine devam edebilmesini sağlar.
+
+**`initialState` parametresi:**
+
+| Değer | Anlamı |
+|---|---|
+| `false` | Nesne **sinyal bekleyen** durumdadır. Thread'in işlemin tamamlandığına dair sinyal verebilmesi için bu değerin `false` olması gerekir. |
+| `true` | Nesne **sinyal verilmiş** durumdadır. Bu durumda her thread'in `AutoResetEvent`'i resetlenmesi gerekir. |
+
+- Beklemeye alınan thread'lerden **yalnızca biri** çalışmasına devam eder.
+- Diğer thread'ler, işletim sistemi tarafından belirlenen **kuyruk sırasına** göre bekler.
+
+> 🔫 **Silah benzetmesi:** `false` denildiğinde kurma kolu çekilmiştir ve event set edilmeyi bekler. `true` denildiğinde kurma kolunun tekrar çekilmesi, yani **reset** edilmesi gerekir. Reset edildikten sonra kurma kolu çekilir ve event set edilebilir.
+
+> [!NOTE]
+> `AutoResetEvent`'te bir thread `Set` fonksiyonuyla sinyali verdikten sonra, event arka planda **otomatik olarak resetlenir.** Böylece sinyali alan thread işlemine devam ederken ilgili event tekrar set edilip yeni sinyal gönderilebilir. Bu otomatik reset, **her sinyal gönderiminde** geçerlidir.
+
+> [!TIP]
+> **Benzetme:** `AutoResetEvent` bir **turnikeye** (her sinyalde tek geçiş), `ManualResetEvent` ise bir **kale kapısına** (açılınca herkes geçer) benzetilebilir.
+
+```csharp
+AutoResetEvent autoEvent = new(false);
+
+for (int i = 1; i <= 3; i++)
+{
+    int no = i;
+    new Thread(() =>
+    {
+        Console.WriteLine($"Thread {no} sinyal bekliyor...");
+        autoEvent.WaitOne();
+        Console.WriteLine($"Thread {no} devam etti.");
+    }).Start();
+}
+
+for (int i = 0; i < 3; i++)
+{
+    Thread.Sleep(1000);
+    autoEvent.Set();   // her sinyalde yalnızca bir thread devam eder
+}
+```
+
+### EventWaitHandle
+
+`AutoResetEvent` ile `ManualResetEvent` yapılarını **ortak bir yapıda** kullanmak amacıyla kullanılan bir yapılanmadır.
+
+```csharp
+// AutoResetEvent davranışı
+EventWaitHandle autoHandle = new(false, EventResetMode.AutoReset);
+
+// ManualResetEvent davranışı
+EventWaitHandle manualHandle = new(false, EventResetMode.ManualReset);
+```
+
+### CountdownEvent
+
+Belirli sayıda thread'in işlemlerini **kümülatif olarak bitirip** ilgili thread'e sinyal vermesine dayalı bir yapılanmadır.
+
+- Instance'a verilen adet kadar thread'in işlemini bitirip `Signal` vermesi beklenir.
+- **N adet thread** işlemini bitirip sinyal verdiğinde, `Wait` durumunda bekleyen ana thread veya başka bir worker thread serbest bırakılır ve çalışmasına devam eder.
+
+```csharp
+CountdownEvent countdown = new(3); // 3 thread'in sinyal vermesi beklenecek
+
+for (int i = 1; i <= 3; i++)
+{
+    int no = i;
+    new Thread(() =>
+    {
+        Console.WriteLine($"Thread {no} çalışıyor...");
+        Thread.Sleep(500 * no);
+        Console.WriteLine($"Thread {no} bitti.");
+        countdown.Signal();
+    }).Start();
+}
+
+countdown.Wait(); // 3 sinyal gelene kadar bekler
+Console.WriteLine("Tüm thread'ler tamamlandı.");
+```
+
+---
+
 ## 📊 Genel Karşılaştırma
 
 <table>
@@ -494,6 +670,36 @@ SpinWait.SpinUntil(() => hazir); // şart sağlanana kadar bekler
     <td>Spinning</td>
     <td>Uygulama</td>
     <td><code>SpinLock</code>'tan daha optimize</td>
+  </tr>
+  <tr>
+    <td><code>ReaderWriterLock / ReaderWriterLockSlim</code></td>
+    <td>Blocking</td>
+    <td>Uygulama</td>
+    <td>Okuma yoğun, yazma nadir senaryolar için; okuma ve yazma ayrı ele alınır</td>
+  </tr>
+  <tr>
+    <td><code>ManualResetEventSlim</code></td>
+    <td>Signalling</td>
+    <td>Uygulama</td>
+    <td>Sinyalde bekleyen tüm thread'ler devam eder, manuel reset gerekir</td>
+  </tr>
+  <tr>
+    <td><code>AutoResetEvent</code></td>
+    <td>Signalling</td>
+    <td>Uygulama</td>
+    <td>Her sinyalde tek thread devam eder, otomatik reset (turnike)</td>
+  </tr>
+  <tr>
+    <td><code>EventWaitHandle</code></td>
+    <td>Signalling</td>
+    <td>Uygulama</td>
+    <td>Auto/Manual reset yapılarını ortak yapıda sunar</td>
+  </tr>
+  <tr>
+    <td><code>CountdownEvent</code></td>
+    <td>Signalling</td>
+    <td>Uygulama</td>
+    <td>N thread bitince bekleyen thread'i serbest bırakır</td>
   </tr>
 </table>
 
