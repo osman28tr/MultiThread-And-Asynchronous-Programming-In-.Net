@@ -43,6 +43,15 @@
   - [AutoResetEvent](#autoresetevent)
   - [EventWaitHandle](#eventwaithandle)
   - [CountdownEvent](#countdownevent)
+- [Thread Pool](#-thread-pool)
+  - [Yapılanması](#yapılanması)
+  - [Kullanılan Metot: QueueUserWorkItem](#kullanılan-metot-queueuserworkitem)
+  - [Maksimum ve Minimum Thread Sayısının Belirlenmesi](#maksimum-ve-minimum-thread-sayısının-belirlenmesi)
+- [Wait Handles Yapılanması](#-wait-handles-yapılanması)
+  - [RegisterWaitForSingleObject](#registerwaitforsingleobject)
+  - [WaitHandle.WaitAll](#waithandlewaitall)
+  - [WaitHandle.WaitAny](#waithandlewaitany)
+  - [WaitHandle.SignalAndWait](#waithandlesignalandwait)
 - [Genel Karşılaştırma](#-genel-karşılaştırma)
 
 ---
@@ -527,7 +536,7 @@ Bir thread'in bir olayı beklemesini ve olay gerçekleştikten sonra işlemine d
 - Beklemeye alınan thread'lerden **yalnızca biri** çalışmasına devam eder.
 - Diğer thread'ler, işletim sistemi tarafından belirlenen **kuyruk sırasına** göre bekler.
 
-
+> 🔫 **Silah benzetmesi:** `false` denildiğinde kurma kolu çekilmiştir ve event set edilmeyi bekler. `true` denildiğinde kurma kolunun tekrar çekilmesi, yani **reset** edilmesi gerekir. Reset edildikten sonra kurma kolu çekilir ve event set edilebilir.
 
 > [!NOTE]
 > `AutoResetEvent`'te bir thread `Set` fonksiyonuyla sinyali verdikten sonra, event arka planda **otomatik olarak resetlenir.** Böylece sinyali alan thread işlemine devam ederken ilgili event tekrar set edilip yeni sinyal gönderilebilir. Bu otomatik reset, **her sinyal gönderiminde** geçerlidir.
@@ -593,6 +602,115 @@ for (int i = 1; i <= 3; i++)
 countdown.Wait(); // 3 sinyal gelene kadar bekler
 Console.WriteLine("Tüm thread'ler tamamlandı.");
 ```
+
+---
+
+## 🏊 Thread Pool
+
+Birden fazla thread'i **ortak bir havuzda yönetmek**, tekrar kullanılabilir hale getirmek ve daha efektif bir davranış sergilemek için kullanılan bir yapılanmadır.
+
+Thread pool ile gereksiz thread oluşturmanın önüne geçip işlemci kaynakları daha verimli kullanılabilir. Örneğin bir thread işlemini bitirdiğinde başka bir operasyonu gerçekleştirecek yeni bir thread oluşturulması gerekiyorsa, bu maliyet ödenmez; işlemini bitiren thread bu yeni operasyonu üstlenir. Böylece yeni thread oluşturma maliyetinin ve olası thread fazlalığından doğan karmaşıklığın önüne geçilmiş olur.
+
+> [!NOTE]
+> Thread pool, esasında **object pooling** tasarım desenindeki davranışın thread bazında implemente edilmiş halidir.
+
+### Yapılanması
+
+- Havuzdaki her bir thread belirli bir işlemi gerçekleştirmek için **bekler.**
+- İşlemini gerçekleştirdikten sonra **havuza geri döner** ve sonraki işlemler için yine hazırda bekler.
+- Bu sayede gereksiz thread oluşturmanın önüne geçilir; thread'lerin sayıları ve planlamaları operasyonlara başlamadan önce belirlenmiş olur ve daha verimli bir çalışma sergilenir.
+
+### Kullanılan Metot: QueueUserWorkItem
+
+```csharp
+ThreadPool.QueueUserWorkItem(state =>
+{
+    Console.WriteLine($"Havuzdaki thread Id: {Environment.CurrentManagedThreadId}");
+});
+
+// Parametre göndermek için
+ThreadPool.QueueUserWorkItem(state =>
+{
+    Console.WriteLine($"Gelen veri: {state}");
+}, "merhaba");
+```
+
+### Maksimum ve Minimum Thread Sayısının Belirlenmesi
+
+`ThreadPool`'u daha optimize kullanabilmek için her yeni operasyona karşılık yeni bir thread oluşturmak yerine:
+
+- **Minimum thread sayısı** ile başlangıçta bu maliyet ödenir ve hızlı reaksiyon alınır.
+- **Maksimum thread sayısı** ile thread pool'da en fazla kaç thread'in hazır bekletilebileceği belirlenir.
+
+```csharp
+ThreadPool.GetMinThreads(out int minWorker, out int minIO);
+ThreadPool.GetMaxThreads(out int maxWorker, out int maxIO);
+
+ThreadPool.SetMinThreads(4, 4);
+ThreadPool.SetMaxThreads(10, 10);
+```
+
+> [!TIP]
+> `ThreadPool`, **yoğun iş taleplerinde ve operasyonlarında** kullanılmaya uygundur. Hem manuel thread oluşturmadaki karmaşıklığı giderir hem de yoğun iş yüküne karşılık daha optimize, verimli, ölçeklenebilir ve performanslı bir çözüm sunar.
+
+---
+
+## ⏳ Wait Handles Yapılanması
+
+**Signalling** yaklaşımını benimseyen genel bir yapılanmadır. Yani bir thread'in başka bir thread'den sinyal beklemesini sağlar ve işlemini buna göre gerçekleştirir. Esasında signalling yapılanmasındaki tüm araçları kapsayan bir yapıdır. `ThreadPool` ile birlikte kullanılabilir.
+
+### RegisterWaitForSingleObject
+
+`RegisterWaitForSingleObject` metodu ile thread pool yapılanmasında kullanılabilir.
+
+> [!WARNING]
+> `Register` ile ilgili event'in referansı tutulduktan sonra, optimizasyon açısından bu referans ve benzeri nesnelerin `Unregister` ile **serbest bırakılması** gerekir.
+
+```csharp
+ManualResetEvent evt = new(false);
+
+RegisteredWaitHandle registered = ThreadPool.RegisterWaitForSingleObject(
+    evt,
+    (state, timedOut) =>
+    {
+        Console.WriteLine(timedOut ? "Zaman aşımı oldu." : "Sinyal alındı.");
+    },
+    null,
+    Timeout.Infinite,
+    true); // yalnızca bir kez çalış
+
+evt.Set();
+
+// İş bittiğinde kaynakları serbest bırak
+registered.Unregister(evt);
+```
+
+### WaitHandle.WaitAll
+
+İlgili thread'in, **tüm** `WaitHandle` yapılandırmalarından sinyal gelmesi durumunda işlemine devam etmesi için kullanılan bir fonksiyondur.
+
+```csharp
+ManualResetEvent[] events = { new(false), new(false), new(false) };
+
+// Üçünden de sinyal gelene kadar bekler
+WaitHandle.WaitAll(events);
+```
+
+### WaitHandle.WaitAny
+
+İlgili thread'in, `WaitHandle` yapılandırmalarının **en az birinden** sinyal gelmesi durumunda işlemine devam etmesi için kullanılan bir fonksiyondur.
+
+```csharp
+ManualResetEvent[] events = { new(false), new(false), new(false) };
+
+// Herhangi birinden sinyal gelince devam eder, sinyal veren event'in index'ini döner
+int index = WaitHandle.WaitAny(events);
+Console.WriteLine($"{index}. event sinyal verdi.");
+```
+
+### WaitHandle.SignalAndWait
+
+<!-- TODO: notlarda bu başlığın açıklaması henüz yazılmamış, açıklama eklenecek. -->
 
 ---
 
@@ -700,6 +818,18 @@ Console.WriteLine("Tüm thread'ler tamamlandı.");
     <td>Signalling</td>
     <td>Uygulama</td>
     <td>N thread bitince bekleyen thread'i serbest bırakır</td>
+  </tr>
+  <tr>
+    <td><code>ThreadPool</code></td>
+    <td>Havuz</td>
+    <td>Uygulama</td>
+    <td>Thread'leri havuzda tutup tekrar kullanır, object pooling davranışı</td>
+  </tr>
+  <tr>
+    <td><code>WaitHandle.WaitAll / WaitAny</code></td>
+    <td>Signalling</td>
+    <td>Uygulama</td>
+    <td>Tüm veya en az bir handle'dan sinyal gelince devam eder</td>
   </tr>
 </table>
 
