@@ -711,6 +711,19 @@ Console.WriteLine($"{index}. event sinyal verdi.");
 ### WaitHandle.SignalAndWait
 
 <!-- TODO: notlarda bu başlığın açıklaması henüz yazılmamış, açıklama eklenecek. -->
+İki signal yapılanmasından birinin diğerinden sinyal beklemesini ve geldiği takdirde ise işlemini yapıp ikincisinin de sinyal gönderip ilgili thread’in çalışmaya devam etmesini sağlayan bir fonksiyondur.
+
+```csharp
+AutoResetEvent autoResetEvent1 = new(false);
+AutoResetEvent autoResetEvent2 = new(false);
+
+autoResetEvent1.Set();
+autoResetEvent2.Set();
+
+WaitHandle.SignalAndWait(autoResetEvent1, autoResetEvent2);
+
+Console.WriteLine("Merhaba, Main Thread");
+```
 
 ---
 
