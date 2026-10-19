@@ -53,6 +53,7 @@
   - [WaitHandle.WaitAny](#waithandlewaitany)
   - [WaitHandle.SignalAndWait](#waithandlesignalandwait)
 - [Genel Karşılaştırma](#-genel-karşılaştırma)
+- [Kaynakça](#-kaynakça)
 
 ---
 
@@ -848,6 +849,12 @@ Console.WriteLine("Merhaba, Main Thread");
 
 ---
 
+## 🔗 Kaynakça
+Bu dokümantasyon hazırlanırken <b>Gençay Yıldız</b> tarafından yayınlanan <b>Asenkron ve Multithread Programlama</b> video eğitim serisinden faydalanılmıştır. Paylaştığı değerli bilgiler ve anlaşılır, detaylı anlatımı için kendisine teşekkür ederim.
+
+---
+
 <div align="center">
   <sub>📚 Asenkron ve Multithread Programlama notları</sub>
 </div>
+
