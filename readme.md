@@ -52,6 +52,7 @@
   - [WaitHandle.WaitAll](#waithandlewaitall)
   - [WaitHandle.WaitAny](#waithandlewaitany)
   - [WaitHandle.SignalAndWait](#waithandlesignalandwait)
+- [Barrier Class](#-barrier-class)
 - [Genel Karşılaştırma](#-genel-karşılaştırma)
 - [Kaynakça](#-kaynakça)
 
@@ -728,6 +729,48 @@ Console.WriteLine("Merhaba, Main Thread");
 
 ---
 
+## 🚦 Barrier Class
+
+Thread'leri herhangi bir `t` anında **ortak bir noktada buluşturmak** ve ona göre bir davranış sergilemek için kullanılan sınıftır. Esasında bir **senkronizasyon aracıdır.**
+
+**Çalışma mantığı:**
+
+1. Thread'lerden biri barrier noktasına geldikten sonra diğer thread'lere sinyal gönderir.
+2. Diğer thread'lerden herhangi biri barrier noktasına sinyal göndermediyse, işlemine devam etmez ve barrier noktasında **bekler.**
+3. Ardından diğer thread'ler de aynı davranışı gerçekleştirir.
+4. Barrier noktasında **tüm thread'lerden sinyal alındıktan sonra**, thread'ler sıfırdan başlatılıyormuş gibi barrier noktasından sonra çalışmalarına devam ederler.
+
+```csharp
+Barrier barrier = new(3); // 3 thread barrier noktasında buluşacak
+
+for (int i = 1; i <= 3; i++)
+{
+    int no = i;
+    new Thread(() =>
+    {
+        Console.WriteLine($"Thread {no} barrier noktasına geliyor...");
+        Thread.Sleep(500 * no);
+
+        barrier.SignalAndWait(); // diğer thread'ler gelene kadar bekler
+
+        Console.WriteLine($"Thread {no} barrier noktasını geçti.");
+    }).Start();
+}
+```
+
+> [!TIP]
+> Tüm thread'ler barrier noktasında buluştuğu anda **bir işlem gerçekleştirmek** istiyorsak `Barrier` sınıfının **ikinci overload'ını** kullanabiliriz.
+
+```csharp
+Barrier barrier = new(3, b =>
+{
+    // Tüm thread'ler barrier noktasında buluştuğunda çalışır
+    Console.WriteLine("Tüm thread'ler barrier noktasında buluştu.");
+});
+```
+
+---
+
 ## 📊 Genel Karşılaştırma
 
 <table>
@@ -845,12 +888,20 @@ Console.WriteLine("Merhaba, Main Thread");
     <td>Uygulama</td>
     <td>Tüm veya en az bir handle'dan sinyal gelince devam eder</td>
   </tr>
+  <tr>
+    <td><code>Barrier</code></td>
+    <td>Signalling</td>
+    <td>Uygulama</td>
+    <td>Thread'leri ortak bir noktada buluşturur, hepsi gelince devam ettirir</td>
+  </tr>
 </table>
 
 ---
 
 ## 🔗 Kaynakça
 Bu dokümantasyon hazırlanırken <b>Gençay Yıldız</b> tarafından yayınlanan <b>Asenkron ve Multithread Programlama</b> video eğitim serisinden faydalanılmıştır. Paylaştığı değerli bilgiler ve anlaşılır, detaylı anlatımı için kendisine teşekkür ederim.
+
+📺 Eğitim serisi: [Asenkron ve Multithread Programlama](https://www.youtube.com/watch?v=vyfwwypSd0E&list=PLQVXoXFVVtp1wcNcTWS1GlC0r4ItcQvAj)
 
 ---
 
