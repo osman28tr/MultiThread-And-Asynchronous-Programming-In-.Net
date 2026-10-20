@@ -4,5 +4,6 @@
   <Project Path="NonBlockingSynchronization/NonBlockingSynchronization.csproj" />
   <Project Path="Signalling/Signalling.csproj" Id="ddb618d7-7b4a-4bfe-b3ab-c5a749e96aa1" />
   <Project Path="SpinningSynchronization/SpinningSynchronization.csproj" />
+  <Project Path="ThreadLocalStorage/ThreadLocalStorage.csproj" Id="fb1b14a3-4856-4857-9fb1-97b6380506f3" />
   <Project Path="ThreadManagement/ThreadManagement.csproj" Id="42f14710-b0f5-4bd5-aada-4bfa8903a260" />
 </Solution>

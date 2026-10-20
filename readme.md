@@ -53,6 +53,10 @@
   - [WaitHandle.WaitAny](#waithandlewaitany)
   - [WaitHandle.SignalAndWait](#waithandlesignalandwait)
 - [Barrier Class](#-barrier-class)
+- [Thread Local Storage (TLS)](#-thread-local-storage-tls)
+  - [ThreadStatic Attribute](#threadstatic-attribute)
+  - [ThreadLocal\<T\> Class](#threadlocalt-class)
+  - [GetData & SetData Fonksiyonları](#getdata--setdata-fonksiyonları)
 - [Genel Karşılaştırma](#-genel-karşılaştırma)
 - [Kaynakça](#-kaynakça)
 
@@ -771,6 +775,135 @@ Barrier barrier = new(3, b =>
 
 ---
 
+## 🗄️ Thread Local Storage (TLS)
+
+Her bir thread için ayrılan, diğer thread'leri etkilemeyen, kendilerine has ayrılmış alanlarda veriler üzerinde değişiklik veya işlem yapabildiğimiz **her bir thread'e özgü izole alanlardır.**
+
+- TLS'de oluşturulan her bir verinin **replikaları** ilgili thread'lerin local storage'ında oluşturulur.
+- Her bir thread için **local bir davranış** sergilenir.
+- Esasında tutarlılığı sağlayan bir **senkronizasyon aracıdır.**
+
+**TLS araçları:** `ThreadStatic` Attribute, `ThreadLocal<T>` Class, `GetData` & `SetData` Fonksiyonları
+
+### ThreadStatic Attribute
+
+Yalnızca **static** değişkenler için kullanılan bir TLS uygulamasıdır. Tip olarak bir attribute'tür. TLS'in uygulanacağı ilgili değişkenin başına `ThreadStatic` attribute'unun tanımlanması yeterlidir.
+
+```csharp
+[ThreadStatic]
+private static int sayac;
+
+static void Main()
+{
+    Thread thread1 = new(() =>
+    {
+        sayac = 10;
+        Console.WriteLine($"Thread 1 : {sayac}"); // 10
+    });
+
+    Thread thread2 = new(() =>
+    {
+        sayac = 20;
+        Console.WriteLine($"Thread 2 : {sayac}"); // 20
+    });
+
+    thread1.Start();
+    thread2.Start();
+    thread1.Join();
+    thread2.Join();
+
+    Console.WriteLine($"Main Thread : {sayac}"); // 0, her thread'in kendi kopyası vardır
+}
+```
+
+> [!WARNING]
+> `[ThreadStatic]` alanına verilen başlangıç değeri (`= 5` gibi) **yalnızca değişkeni ilk kullanan thread için** atanır. Diğer thread'lerde alan `default` değeriyle (`0`, `null` vb.) başlar.
+
+### `ThreadLocal<T>` Class
+
+Hem **static** hem de **instance** değişkenler için TLS sağlar ve her bir thread için başlangıçta **default replikasyon** sağlar.
+
+1. Kullanmak istediğimiz değişkenin tipi generic olarak verilerek bir instance oluşturulur.
+2. Bu değişkenin değerine `.Value` property'si ile erişilir.
+
+```csharp
+using ThreadLocal<int> sayac = new();
+
+Thread thread1 = new(() =>
+{
+    sayac.Value = 5;
+    Console.WriteLine($"Thread 1 : {sayac.Value}"); // 5
+});
+
+Thread thread2 = new(() =>
+{
+    Console.WriteLine($"Thread 2 : {sayac.Value}"); // 0, default değer
+});
+
+thread1.Start();
+thread1.Join();
+thread2.Start();
+thread2.Join();
+```
+
+### GetData & SetData Fonksiyonları
+
+Her bir thread slot adı verilen yapılarda verileri depolar ve okurlar. Slot yapılanmasıyla TLS davranışının sergilendiği bir yöntemdir. Thread sınıfı üzerinden GetNamedDataSlot metodu çağrılıp bir slot oluşturulur ve bu slot’a ilgili veri aktarılıp depolanır ardından her bir thread kendi local storagelar’ında depolanan bu slotları çağırıp ilgili veriye erişim sağlayıp üzerinde değişiklik yapabilecektir.
+
+```csharp
+internal class Program
+{
+	static LocalDataStoreSlot localDataStoreSlot = Thread.GetNamedDataSlot("x");
+	static int x { 
+		get {
+			var data = (int?)Thread.GetData(localDataStoreSlot);
+			return data is null ? 0 : data.Value;
+		} 		
+		set {
+			Thread.SetData(localDataStoreSlot, value);
+		} 
+	
+	
+	}
+	private static void Main(string[] args)
+	{		
+		Thread thread1 = new Thread(() =>
+		{
+			while (x <= 10)
+			{
+				Console.WriteLine($"Thread1 x: {++x}");
+			}
+		});
+
+		Thread thread2 = new Thread(() =>
+		{
+			while (x <= 10)
+			{
+				Console.WriteLine($"Thread2 x: {++x}");
+			}
+		});
+
+		Thread thread3 = new Thread(() =>
+		{
+			while (x <= 10)
+			{
+				Console.WriteLine($"Thread3 x: {++y}");
+			}
+		});
+
+		thread1.Start();
+		thread2.Start();
+		thread3.Start();
+
+
+		Console.Read();
+	}
+}
+
+
+```
+---
+
 ## 📊 Genel Karşılaştırma
 
 <table>
@@ -893,6 +1026,18 @@ Barrier barrier = new(3, b =>
     <td>Signalling</td>
     <td>Uygulama</td>
     <td>Thread'leri ortak bir noktada buluşturur, hepsi gelince devam ettirir</td>
+  </tr>
+  <tr>
+    <td><code>ThreadStatic</code></td>
+    <td>TLS</td>
+    <td>Uygulama</td>
+    <td>Yalnızca static değişkenler için, her thread'e özel kopya</td>
+  </tr>
+  <tr>
+    <td><code>ThreadLocal&lt;T&gt;</code></td>
+    <td>TLS</td>
+    <td>Uygulama</td>
+    <td>Static ve instance değişkenler için, <code>.Value</code> ile erişim</td>
   </tr>
 </table>
 
