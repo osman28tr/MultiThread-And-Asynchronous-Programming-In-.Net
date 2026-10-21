@@ -57,6 +57,9 @@
   - [ThreadStatic Attribute](#threadstatic-attribute)
   - [ThreadLocal\<T\> Class](#threadlocalt-class)
   - [GetData & SetData Fonksiyonları](#getdata--setdata-fonksiyonları)
+- [Timers](#-timers)
+  - [Multithread Timer](#multithread-timer)
+  - [Singlethread Timer](#singlethread-timer)
 - [Genel Karşılaştırma](#-genel-karşılaştırma)
 - [Kaynakça](#-kaynakça)
 
@@ -848,60 +851,69 @@ thread2.Join();
 
 ### GetData & SetData Fonksiyonları
 
-Her bir thread slot adı verilen yapılarda verileri depolar ve okurlar. Slot yapılanmasıyla TLS davranışının sergilendiği bir yöntemdir. Thread sınıfı üzerinden GetNamedDataSlot metodu çağrılıp bir slot oluşturulur ve bu slot’a ilgili veri aktarılıp depolanır ardından her bir thread kendi local storagelar’ında depolanan bu slotları çağırıp ilgili veriye erişim sağlayıp üzerinde değişiklik yapabilecektir.
+<!-- TODO: notlarda bu başlığın açıklaması henüz yazılmamış, açıklama eklenecek. -->
+
+---
+
+## ⏰ Timers
+
+Multithread programlamada belirli **periyodik işlemleri otomatik olarak** gerçekleştirmek için kullanılan yapılandırmalardır. **Multithread timer** ve **single thread timer** olmak üzere 2 şekilde incelenebilir.
+
+<table>
+  <tr>
+    <th align="left" width="180">Tür</th>
+    <th align="left">Açıklama</th>
+    <th align="left">Örnek</th>
+  </tr>
+  <tr>
+    <td><b>Multithread Timer</b></td>
+    <td>Singlethread timer'lara göre daha <b>güçlü, hassas ve esnektir.</b></td>
+    <td><code>System.Threading.Timer</code></td>
+  </tr>
+  <tr>
+    <td><b>Singlethread Timer</b></td>
+    <td>Windows Forms ve WPF uygulamalarında kullanılan timer'lardır.</td>
+    <td><code>System.Windows.Forms.Timer</code>, <code>DispatcherTimer</code></td>
+  </tr>
+</table>
+
+### Multithread Timer
 
 ```csharp
-internal class Program
-{
-	static LocalDataStoreSlot localDataStoreSlot = Thread.GetNamedDataSlot("x");
-	static int x { 
-		get {
-			var data = (int?)Thread.GetData(localDataStoreSlot);
-			return data is null ? 0 : data.Value;
-		} 		
-		set {
-			Thread.SetData(localDataStoreSlot, value);
-		} 
-	
-	
-	}
-	private static void Main(string[] args)
-	{		
-		Thread thread1 = new Thread(() =>
-		{
-			while (x <= 10)
-			{
-				Console.WriteLine($"Thread1 x: {++x}");
-			}
-		});
+using System.Threading;
 
-		Thread thread2 = new Thread(() =>
-		{
-			while (x <= 10)
-			{
-				Console.WriteLine($"Thread2 x: {++x}");
-			}
-		});
+// (callback, state, dueTime, period)
+using var timer = new System.Threading.Timer(
+    state => Console.WriteLine($"Timer tetiklendi: {DateTime.Now:T}"),
+    null,
+    0,      // dueTime: ilk tetiklenmeden önceki bekleme (ms)
+    1000);  // period: periyot (ms)
 
-		Thread thread3 = new Thread(() =>
-		{
-			while (x <= 10)
-			{
-				Console.WriteLine($"Thread3 x: {++y}");
-			}
-		});
-
-		thread1.Start();
-		thread2.Start();
-		thread3.Start();
-
-
-		Console.Read();
-	}
-}
-
-
+Thread.Sleep(5000);
 ```
+
+> [!NOTE]
+> Timer'ın **zamansal periyodik değerini değiştirmek** için `timer.Change` fonksiyonu kullanılır.
+
+```csharp
+timer.Change(0, 2000); // artık 2 saniyede bir tetiklenir
+```
+
+> [!TIP]
+> Timer'ı **sadece bir kez tetiklemek** için timer instance'ının **4. parametresi** olan periyodik değere `Timeout.Infinite` değerinin verilmesi gerekir.
+
+```csharp
+using var birKez = new System.Threading.Timer(
+    state => Console.WriteLine("Yalnızca bir kez çalıştı."),
+    null,
+    1000,
+    Timeout.Infinite);
+```
+
+### Singlethread Timer
+
+Windows Forms ve WPF uygulamalarında kullanılan timer'lardır.
+
 ---
 
 ## 📊 Genel Karşılaştırma
@@ -1038,6 +1050,12 @@ internal class Program
     <td>TLS</td>
     <td>Uygulama</td>
     <td>Static ve instance değişkenler için, <code>.Value</code> ile erişim</td>
+  </tr>
+  <tr>
+    <td><code>Timer</code></td>
+    <td>Periyodik</td>
+    <td>Uygulama</td>
+    <td>Multithread ve singlethread (WinForms/WPF) olarak ikiye ayrılır, periyot <code>Change</code> ile değişir</td>
   </tr>
 </table>
 

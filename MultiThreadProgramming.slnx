@@ -6,4 +6,5 @@
   <Project Path="SpinningSynchronization/SpinningSynchronization.csproj" />
   <Project Path="ThreadLocalStorage/ThreadLocalStorage.csproj" Id="fb1b14a3-4856-4857-9fb1-97b6380506f3" />
   <Project Path="ThreadManagement/ThreadManagement.csproj" Id="42f14710-b0f5-4bd5-aada-4bfa8903a260" />
+  <Project Path="Timers/Timers.csproj" Id="49928786-7af9-4046-81aa-0e4e0b1e69ea" />
 </Solution>
