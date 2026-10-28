@@ -113,7 +113,7 @@ internal class Program
 		{
 			while (x <= 10)
 			{
-				Console.WriteLine($"Thread3 x: {++y}");
+				Console.WriteLine($"Thread3 x: {++x}");
 			}
 		});
 
