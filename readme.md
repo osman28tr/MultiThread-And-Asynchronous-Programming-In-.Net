@@ -1,6 +1,6 @@
 <div align="center">
 
-<h1>🧵 Asenkron ve Multithread Programlama</h1>
+<h1>🧵 Multithread Programlama ile Asenkron İşlemler</h1>
 
 <p><em>C# / .NET ile thread, senkronizasyon ve eşzamanlılık</em></p>
 
